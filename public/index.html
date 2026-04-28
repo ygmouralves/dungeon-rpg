@@ -11,110 +11,116 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════ LAYOUT ═══ -->
-<div class="game-layout">
+<div class="g-layout">
 
-  <!-- Header ─────────────────────────────────────────────────────────── -->
-  <header class="game-header panel">
-    <span class="header-title">⚔ DUNGEON RPG</span>
-    <span class="header-floor">ANDAR&nbsp;<span id="floor-display">—</span></span>
-    <span class="header-dot" id="conn-dot" title="Desconectado">●</span>
+  <!-- Header ───────────────────────────────────────────────── -->
+  <header class="g-header">
+    <span class="g-logo">⚔ DUNGEON RPG</span>
+    <span class="g-floor-badge">ANDAR <span id="floor-display">—</span></span>
+    <span id="conn-dot" class="g-conn" title="Desconectado">●</span>
   </header>
 
-  <!-- Main area ───────────────────────────────────────────────────────── -->
-  <main class="game-main panel">
+  <!-- Sidebar ──────────────────────────────────────────────── -->
+  <aside class="g-sidebar">
+    <div class="g-player-top">
+      <div id="char-portrait" class="s-portrait">🧝</div>
+      <div id="player-name"  class="s-name">—</div>
+      <div id="player-level" class="s-level">Lv.1</div>
+    </div>
+
+    <div class="s-divider"></div>
+
+    <div class="s-bars">
+      <div class="s-bar-row">
+        <span class="s-bar-k">HP</span>
+        <div class="s-bar-track">
+          <div id="hp-bar-fill" class="s-fill hp-fill" style="width:100%"></div>
+        </div>
+        <span id="hp-bar-label" class="s-bar-v">100/100</span>
+      </div>
+      <div class="s-bar-row">
+        <span class="s-bar-k">MP</span>
+        <div class="s-bar-track">
+          <div id="mp-bar-fill" class="s-fill mp-fill" style="width:100%"></div>
+        </div>
+        <span id="mp-bar-label" class="s-bar-v">60/60</span>
+      </div>
+      <div class="s-bar-row">
+        <span class="s-bar-k">XP</span>
+        <div class="s-bar-track">
+          <div id="xp-bar-fill" class="s-fill xp-fill" style="width:0%"></div>
+        </div>
+        <span id="xp-bar-label" class="s-bar-v">0/100</span>
+      </div>
+    </div>
+
+    <div class="s-divider"></div>
+
+    <div class="s-stats">
+      <div class="s-stat"><span class="s-stat-k">ATK</span><span id="stat-atk"   class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">DEF</span><span id="stat-def"   class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">GOLD</span><span id="stat-gold" class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">ANDAR</span><span id="stat-floor" class="s-stat-v">—</span></div>
+    </div>
+
+    <div class="s-divider"></div>
+
+    <div class="s-section-label">STATUS</div>
+    <div id="status-effects" class="s-status"></div>
+
+    <div class="s-divider"></div>
+
+    <div class="s-section-label">ATALHOS</div>
+    <div class="s-hotkeys">
+      <div class="s-hk"><kbd>1</kbd> Atacar</div>
+      <div class="s-hk"><kbd>2</kbd> Habilidade</div>
+      <div class="s-hk"><kbd>3</kbd> Item</div>
+      <div class="s-hk"><kbd>4</kbd> Fugir</div>
+    </div>
+  </aside>
+
+  <!-- Arena ────────────────────────────────────────────────── -->
+  <main class="g-arena">
 
     <!-- Name screen -->
     <div id="name-screen" class="screen">
-      <div class="name-form">
-        <div class="name-title">⚔ DUNGEON RPG ⚔</div>
-        <div class="name-subtitle">Crie seu herói e adentre a masmorra</div>
-        <input id="name-input" class="pixel-input" type="text"
-               maxlength="20" placeholder="Nome do herói..." autocomplete="off" />
-        <button id="name-submit-btn" class="choice-btn standalone">▶ COMEÇAR AVENTURA</button>
-        <div class="name-hint">Pressione Enter para iniciar</div>
+      <div class="ns-bg"></div>
+      <div class="ns-content">
+        <div class="ns-rune">⚔</div>
+        <h1 class="ns-title">DUNGEON RPG</h1>
+        <p class="ns-sub">Adentre o abismo. Conquiste as sombras.</p>
+        <div class="ns-form">
+          <input id="name-input" class="ns-input" type="text"
+                 maxlength="20" placeholder="Nome do aventureiro..." autocomplete="off" />
+          <button id="name-submit-btn" class="ns-btn">
+            <span class="ns-btn-text">ENTRAR NO ABISMO</span>
+            <span class="ns-btn-arrow">→</span>
+          </button>
+        </div>
+        <p class="ns-hint">Pressione Enter para iniciar</p>
       </div>
     </div>
 
     <!-- Game screen -->
     <div id="game-screen" class="screen hidden">
-
-      <!-- Room header -->
-      <div id="room-display" class="room-display">
-        <span class="room-icon">🚪</span>
-        <span class="room-desc">Aguardando...</span>
-      </div>
-
-      <!-- Enemy arena -->
-      <div id="enemy-area" class="enemy-area"></div>
-
-      <!-- Action buttons / prompts -->
-      <div id="action-area" class="action-area"></div>
-
+      <div id="room-display" class="g-room"></div>
+      <div id="enemy-area"   class="g-enemies"></div>
+      <div id="action-area"  class="g-actions"></div>
     </div>
+
   </main>
 
-  <!-- Sidebar — character panel ──────────────────────────────────────── -->
-  <aside class="game-sidebar panel">
-    <div class="panel-title">🧝 PERSONAGEM</div>
-
-    <div class="char-portrait" id="char-portrait">🧝</div>
-    <div id="player-name"  class="char-name">—</div>
-    <div id="player-level" class="char-level">Lv.1</div>
-
-    <div class="stat-bars">
-      <div class="bar-row">
-        <span class="bar-label">HP</span>
-        <div class="bar-track">
-          <div id="hp-bar-fill" class="bar-fill hp-fill" style="width:100%"></div>
-        </div>
-        <span id="hp-bar-label" class="bar-val">100/100</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label">MP</span>
-        <div class="bar-track">
-          <div id="mp-bar-fill" class="bar-fill mp-fill" style="width:100%"></div>
-        </div>
-        <span id="mp-bar-label" class="bar-val">60/60</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label">XP</span>
-        <div class="bar-track">
-          <div id="xp-bar-fill" class="bar-fill xp-fill" style="width:0%"></div>
-        </div>
-        <span id="xp-bar-label" class="bar-val">0/100</span>
-      </div>
+  <!-- Log ──────────────────────────────────────────────────── -->
+  <div class="g-log">
+    <div class="g-log-header">
+      <span class="g-log-title">// COMBAT LOG</span>
     </div>
-
-    <div class="stats-grid">
-      <div class="stat-item">⚔ ATK<br><span id="stat-atk">—</span></div>
-      <div class="stat-item">🛡 DEF<br><span id="stat-def">—</span></div>
-      <div class="stat-item">💰 GOLD<br><span id="stat-gold">—</span></div>
-      <div class="stat-item">📍 ANDAR<br><span id="stat-floor">—</span></div>
-    </div>
-
-    <div class="panel-title" style="margin-top:6px">✨ STATUS</div>
-    <div id="status-effects" class="status-area"></div>
-
-    <div class="panel-title" style="margin-top:6px">⌨ ATALHOS</div>
-    <div class="hotkeys-area">
-      <div class="hotkey-row"><kbd>1</kbd> Atacar</div>
-      <div class="hotkey-row"><kbd>2</kbd> Habilidade</div>
-      <div class="hotkey-row"><kbd>3</kbd> Item</div>
-      <div class="hotkey-row"><kbd>4</kbd> Fugir</div>
-    </div>
-  </aside>
-
-  <!-- Battle log ──────────────────────────────────────────────────────── -->
-  <div class="game-log panel">
-    <div class="panel-title">📜 LOG DE BATALHA</div>
-    <div id="battle-log" class="battle-log"></div>
+    <div id="battle-log" class="g-log-body"></div>
   </div>
 
-</div><!-- /game-layout -->
+</div>
 
-<!-- Game Over / Victory overlay -->
-<div id="overlay" class="overlay hidden"></div>
+<div id="overlay" class="ov hidden"></div>
 
 <script src="game.js"></script>
 </body>

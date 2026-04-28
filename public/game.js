@@ -168,7 +168,7 @@ function updateHUD(player, enemies) {
 
   // Level-up flash
   if (prev && player.level > prev.level) {
-    const sidebar = document.querySelector('.game-sidebar');
+    const sidebar = document.querySelector('.g-sidebar');
     sidebar.classList.remove('sidebar-levelup');
     void sidebar.offsetWidth; // reflow to restart animation
     sidebar.classList.add('sidebar-levelup');
@@ -204,7 +204,7 @@ function showRoom(roomType, description) {
   const icon  = ROOM_ICONS[roomType]  ?? '🚪';
   const cls   = ROOM_CLASSES[roomType] ?? '';
 
-  els.roomDisplay.className = `room-display ${cls}`;
+  els.roomDisplay.className = `g-room ${cls}`;
   els.roomDisplay.innerHTML = `
     <span class="room-icon">${icon}</span>
     <span class="room-desc">${escHtml(description)}</span>
@@ -221,7 +221,7 @@ function updateEnemies(enemies) {
   showScreen('game');
 
   // Update existing cards or rebuild
-  const existing = els.enemyArea.querySelectorAll('.enemy-card');
+  const existing = els.enemyArea.querySelectorAll('.ec');
   if (existing.length === alive.length) {
     alive.forEach((e, i) => updateEnemyCard(existing[i], e));
   } else {
@@ -233,31 +233,32 @@ function buildEnemyCardHtml(enemy) {
   const pct    = Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100));
   const sprite = ENEMY_SPRITES[enemy.name] ?? DEFAULT_SPRITE;
   const tier   = (enemy.tier || '').toLowerCase();
-  const badge  = enemy.tier === 'BOSS'  ? '<div class="tier-badge">👑 BOSS</div>'
-               : enemy.tier === 'ELITE' ? '<div class="tier-badge">⚡ ELITE</div>'
+  const badge  = enemy.tier === 'BOSS'  ? '<div class="ec-badge">👑 BOSS</div>'
+               : enemy.tier === 'ELITE' ? '<div class="ec-badge">⚡ ELITE</div>'
                : '';
   const status = (enemy.statusEffects || []).filter(Boolean).join(' ');
 
   return `
-    <div class="enemy-card ${tier}" data-name="${escHtml(enemy.name)}">
+    <div class="ec ${tier}" data-name="${escHtml(enemy.name)}">
+      <div class="ec-aura"></div>
       ${badge}
-      <div class="enemy-sprite">${sprite}</div>
-      <div class="enemy-name">${escHtml(enemy.name)}</div>
-      <div class="enemy-level">Lv.${enemy.level}</div>
-      <div class="enemy-hp-bar">
-        <div class="enemy-hp-fill" style="width:${pct}%"></div>
+      <div class="ec-sprite">${sprite}</div>
+      <div class="ec-name">${escHtml(enemy.name)}</div>
+      <div class="ec-level">Lv.${enemy.level}</div>
+      <div class="ec-hp-bar">
+        <div class="ec-hp-fill" style="width:${pct}%"></div>
       </div>
-      <div class="enemy-hp-label">${enemy.hp}/${enemy.maxHp}</div>
-      ${status ? `<div class="enemy-status">${escHtml(status)}</div>` : ''}
+      <div class="ec-hp-val">${enemy.hp}/${enemy.maxHp}</div>
+      ${status ? `<div class="ec-status">${escHtml(status)}</div>` : ''}
     </div>
   `;
 }
 
 function updateEnemyCard(cardEl, enemy) {
   const pct = Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100));
-  const fill = cardEl.querySelector('.enemy-hp-fill');
-  const lbl  = cardEl.querySelector('.enemy-hp-label');
-  const sts  = cardEl.querySelector('.enemy-status');
+  const fill = cardEl.querySelector('.ec-hp-fill');
+  const lbl  = cardEl.querySelector('.ec-hp-val');
+  const sts  = cardEl.querySelector('.ec-status');
 
   const prevPct = parseFloat(fill.style.width || '100');
   if (pct < prevPct) {
@@ -362,9 +363,9 @@ function clearActionArea() {
 function showOverlay(cls, title, sub) {
   state.phase = cls === 'game-over' ? 'GAME_OVER' : 'VICTORY';
   els.overlay.innerHTML = `
-    <div class="overlay-content ${cls}">
-      <div class="overlay-title">${title}</div>
-      <div class="overlay-sub">${escHtml(sub)}</div>
+    <div class="ov-content ${cls}">
+      <div class="ov-title">${title}</div>
+      <div class="ov-sub">${escHtml(sub)}</div>
       <button class="choice-btn standalone" onclick="location.reload()">
         🔄 Jogar Novamente
       </button>
