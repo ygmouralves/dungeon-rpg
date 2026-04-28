@@ -99,6 +99,17 @@ export class CombatEngine {
 
       if (choice === '1') return { type: 'ATTACK' };
 
+      // Direct skill selection (web UI sends skill_SKILL_ID)
+      if (choice.startsWith('skill_')) {
+        const skillId = choice.slice(6);
+        const skill = player.skills.find(s => s.id === skillId);
+        if (skill && skill.canUse(player)) return { type: 'SKILL', skill };
+        this._renderer.log('Habilidade indisponível no momento.');
+        this._renderer.renderActionMenu(player, enemies);
+        continue;
+      }
+
+      // Terminal fallback: '2' opens skill submenu
       if (choice === '2') {
         const usable = player.skills.filter(s => s.canUse(player));
         if (usable.length === 0) {

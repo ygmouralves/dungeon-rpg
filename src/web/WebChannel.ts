@@ -5,6 +5,8 @@ import type { ClassUI } from '../core/classes/CharacterClass';
 export interface ChoiceItem {
   value: string;
   label: string;
+  description?: string;
+  kind?: 'attack' | 'skill' | 'item' | 'flee' | 'default';
   disabled?: boolean;
 }
 

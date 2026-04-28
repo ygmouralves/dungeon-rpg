@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚔️ Dungeon RPG</title>
+  <title>Projeto Éter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <div class="g-layout">
 
-  <!-- Header ───────────────────────────────────────────────── -->
+  <!-- Header -->
   <header class="g-header">
-    <span class="g-logo">⚔ DUNGEON RPG</span>
-    <span class="g-floor-badge">ANDAR <span id="floor-display">—</span></span>
+    <span class="g-logo">PROJETO <span class="g-logo-accent">ÉTER</span></span>
+    <span class="g-floor-badge">NÍVEL <span id="floor-display">—</span></span>
     <span id="conn-dot" class="g-conn" title="Desconectado">●</span>
   </header>
 
-  <!-- Sidebar ──────────────────────────────────────────────── -->
+  <!-- Sidebar -->
   <aside class="g-sidebar">
     <div class="g-player-top">
-      <div id="char-portrait" class="s-portrait">🧝</div>
+      <div id="char-portrait" class="s-portrait"></div>
       <div id="player-name"  class="s-name">—</div>
       <div id="player-level" class="s-level">Lv.1</div>
     </div>
@@ -39,7 +39,7 @@
         <span id="hp-bar-label" class="s-bar-v">100/100</span>
       </div>
       <div class="s-bar-row">
-        <span class="s-bar-k">MP</span>
+        <span class="s-bar-k">EP</span>
         <div class="s-bar-track">
           <div id="mp-bar-fill" class="s-fill mp-fill" style="width:100%"></div>
         </div>
@@ -57,10 +57,10 @@
     <div class="s-divider"></div>
 
     <div class="s-stats">
-      <div class="s-stat"><span class="s-stat-k">ATK</span><span id="stat-atk"   class="s-stat-v">—</span></div>
-      <div class="s-stat"><span class="s-stat-k">DEF</span><span id="stat-def"   class="s-stat-v">—</span></div>
-      <div class="s-stat"><span class="s-stat-k">GOLD</span><span id="stat-gold" class="s-stat-v">—</span></div>
-      <div class="s-stat"><span class="s-stat-k">ANDAR</span><span id="stat-floor" class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">ATK</span><span id="stat-atk"    class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">DEF</span><span id="stat-def"    class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">OURO</span><span id="stat-gold"  class="s-stat-v">—</span></div>
+      <div class="s-stat"><span class="s-stat-k">NÍVEL</span><span id="stat-floor" class="s-stat-v">—</span></div>
     </div>
 
     <div class="s-divider"></div>
@@ -73,31 +73,31 @@
     <div class="s-section-label">ATALHOS</div>
     <div class="s-hotkeys">
       <div class="s-hk"><kbd>1</kbd> Atacar</div>
-      <div class="s-hk"><kbd>2</kbd> Habilidade</div>
-      <div class="s-hk"><kbd>3</kbd> Item</div>
-      <div class="s-hk"><kbd>4</kbd> Fugir</div>
+      <div class="s-hk"><kbd>2–4</kbd> Habilidades</div>
+      <div class="s-hk"><kbd>5</kbd> Item</div>
+      <div class="s-hk"><kbd>6</kbd> Fugir</div>
     </div>
   </aside>
 
-  <!-- Arena ────────────────────────────────────────────────── -->
+  <!-- Arena -->
   <main class="g-arena">
 
     <!-- Name screen -->
     <div id="name-screen" class="screen">
       <div class="ns-bg"></div>
       <div class="ns-content">
-        <div class="ns-rune">⚔</div>
-        <h1 class="ns-title">DUNGEON RPG</h1>
-        <p class="ns-sub">Adentre o abismo. Conquiste as sombras.</p>
+        <div class="ns-rune">◈</div>
+        <h1 class="ns-title">PROJETO ÉTER</h1>
+        <p class="ns-sub">Adentre o fluxo. Conquiste o abismo.</p>
         <div class="ns-form">
           <input id="name-input" class="ns-input" type="text"
-                 maxlength="20" placeholder="Nome do aventureiro..." autocomplete="off" />
+                 maxlength="20" placeholder="Identificação do agente..." autocomplete="off" />
           <button id="name-submit-btn" class="ns-btn">
-            <span class="ns-btn-text">ENTRAR NO ABISMO</span>
+            <span class="ns-btn-text">INICIAR PROTOCOLO</span>
             <span class="ns-btn-arrow">→</span>
           </button>
         </div>
-        <p class="ns-hint">Pressione Enter para iniciar</p>
+        <p class="ns-hint">Pressione Enter para continuar</p>
       </div>
     </div>
 
@@ -105,9 +105,9 @@
     <div id="class-screen" class="screen hidden">
       <div class="cs-bg"></div>
       <div class="cs-content">
-        <div class="cs-title">ESCOLHA SUA CLASSE</div>
+        <div class="cs-title">SELECIONE SUA CLASSE</div>
         <div id="class-grid" class="cs-grid"></div>
-        <p class="cs-hint">Clique em uma classe para continuar</p>
+        <p class="cs-hint">Clique para selecionar · Enter para confirmar</p>
       </div>
     </div>
 
@@ -120,10 +120,10 @@
 
   </main>
 
-  <!-- Log ──────────────────────────────────────────────────── -->
+  <!-- Log -->
   <div class="g-log">
     <div class="g-log-header">
-      <span class="g-log-title">// COMBAT LOG</span>
+      <span class="g-log-title">// ETHER LOG</span>
     </div>
     <div id="battle-log" class="g-log-body"></div>
   </div>

@@ -23,7 +23,6 @@ export interface ClassSkillUI {
 export interface ClassUI {
   id: string;
   name: string;
-  portrait: string;
   tagline: string;
   lore: string;
   color: string;
@@ -38,106 +37,102 @@ interface ClassDef extends ClassUI {
 function makeStartingPotion(): ConsumableItem {
   return new ConsumableItem(
     'potion_start',
-    'Poção de Cura',
+    'Frasco de Éter',
     'Restaura 30 HP.',
     'COMMON',
-    (t: Entity) => { const h = t.heal(30); return `💊 Usou Poção de Cura e recuperou ${h} HP.`; },
+    (t: Entity) => { const h = t.heal(30); return `◈ Usou Frasco de Éter e recuperou ${h} HP.`; },
   );
 }
 
 const CLASS_DEFS: ClassDef[] = [
   {
-    id: 'warrior',
-    name: 'GUERREIRO',
-    portrait: '⚔️',
-    tagline: 'Tanque implacável',
-    lore: 'Forjado em batalha, o Guerreiro suporta o que outros não conseguem. Cada cicatriz é uma medalha.',
-    color: '#ef4444',
-    stats: { hp: 140, mp: 40, atk: 14, def: 8, spd: 5 },
+    id: 'vanguard',
+    name: 'VANGUARDISTA',
+    tagline: 'Escudo do Éter',
+    lore: 'O escudo que separa a civilização do caos. Forjado em batalha, resiste onde outros recuam.',
+    color: '#79c0ff',
+    stats: { hp: 150, mp: 35, atk: 13, def: 9, spd: 4 },
     skills: [
-      { name: 'Golpe Poderoso', description: '2.2× dano + Fraqueza', manaCost: 10 },
-      { name: 'Grito de Guerra', description: '+8 DEF por 3 turnos', manaCost: 20 },
-      { name: 'Fendilhar', description: '2× dano brutal', manaCost: 25 },
+      { name: 'Golpe Poderoso',  description: '2.2× dano + Fraqueza',   manaCost: 10 },
+      { name: 'Grito de Guerra', description: '+8 DEF por 3 turnos',    manaCost: 20 },
+      { name: 'Fendilhar',       description: '2× dano brutal',         manaCost: 25 },
     ],
     buildPlayer: (name) => {
       const inv = new Inventory(20);
       inv.add(makeStartingPotion());
       return new Player(
         name,
-        { hp: 140, maxHp: 140, mana: 40, maxMana: 40, baseAttack: 14, baseDefense: 8, speed: 5, level: 1 },
+        { hp: 150, maxHp: 150, mana: 35, maxMana: 35, baseAttack: 13, baseDefense: 9, speed: 4, level: 1 },
         [new PowerStrikeSkill(), new BattleCrySkill(), new CleaveSkill()],
         inv,
       );
     },
   },
   {
-    id: 'mage',
-    name: 'MAGO',
-    portrait: '🔮',
-    tagline: 'Devastação arcana',
-    lore: 'Canaliza energias proibidas para aniquilar inimigos. Frágil como vidro, poderoso como uma tempestade.',
-    color: '#3b82f6',
-    stats: { hp: 70, mp: 100, atk: 18, def: 2, spd: 7 },
+    id: 'technomage',
+    name: 'TECNOMAGO',
+    tagline: 'Arquiteto do Caos',
+    lore: 'Manipula o fluxo de dados do Éter para dobrar a realidade. Frágil como vidro, letal como raio.',
+    color: '#bb86fc',
+    stats: { hp: 65, mp: 110, atk: 20, def: 2, spd: 8 },
     skills: [
-      { name: 'Bola de Fogo', description: '1.8× dano + Queimadura', manaCost: 20 },
-      { name: 'Fragmento de Gelo', description: '1.5× dano + Atordoa', manaCost: 30 },
-      { name: 'Surto Arcano', description: '3× dano devastador', manaCost: 50 },
+      { name: 'Bola de Fogo',    description: '1.8× dano + Queimadura', manaCost: 20 },
+      { name: 'Fragmento de Gelo', description: '1.5× dano + Atordoa',  manaCost: 30 },
+      { name: 'Surto Arcano',    description: '3× dano devastador',     manaCost: 50 },
     ],
     buildPlayer: (name) => {
       const inv = new Inventory(20);
       inv.add(makeStartingPotion());
       return new Player(
         name,
-        { hp: 70, maxHp: 70, mana: 100, maxMana: 100, baseAttack: 18, baseDefense: 2, speed: 7, level: 1 },
+        { hp: 65, maxHp: 65, mana: 110, maxMana: 110, baseAttack: 20, baseDefense: 2, speed: 8, level: 1 },
         [new FireballSkill(), new IceShardSkill(), new ArcaneSurgeSkill()],
         inv,
       );
     },
   },
   {
-    id: 'paladin',
-    name: 'PALADINO',
-    portrait: '🛡️',
-    tagline: 'Guerreiro sagrado',
-    lore: 'Abençoado pelos deuses antigos, equilibra lâmina e oração. Sustenta aliados e pune os ímpios.',
-    color: '#f59e0b',
-    stats: { hp: 110, mp: 70, atk: 11, def: 7, spd: 5 },
+    id: 'netcipher',
+    name: 'NETCIPHER',
+    tagline: 'Sombra do Éter',
+    lore: 'Especialista em infiltração e ataques de precisão rápida. Age antes que o inimigo perceba.',
+    color: '#22c55e',
+    stats: { hp: 80, mp: 55, atk: 17, def: 4, spd: 11 },
     skills: [
-      { name: 'Cura Sagrada', description: 'Cura 25% HP + Regen', manaCost: 25 },
-      { name: 'Golpe Sagrado', description: '1.6× dano + cura própria', manaCost: 35 },
-      { name: 'Escudo Divino', description: '+10 DEF + Regen 3 turnos', manaCost: 30 },
+      { name: 'Golpe Traiçoeiro',   description: '2.8× dano crítico',        manaCost: 20 },
+      { name: 'Lâmina Envenenada',  description: 'Dano + Veneno por 3 turnos', manaCost: 15 },
+      { name: 'Golpe Poderoso',     description: '2.2× dano + Fraqueza',      manaCost: 10 },
     ],
     buildPlayer: (name) => {
       const inv = new Inventory(20);
       inv.add(makeStartingPotion());
       return new Player(
         name,
-        { hp: 110, maxHp: 110, mana: 70, maxMana: 70, baseAttack: 11, baseDefense: 7, speed: 5, level: 1 },
-        [new HealSkill(), new HolyStrikeSkill(), new DivineShieldSkill()],
+        { hp: 80, maxHp: 80, mana: 55, maxMana: 55, baseAttack: 17, baseDefense: 4, speed: 11, level: 1 },
+        [new BackstabSkill(), new PoisonBladeSkill(), new PowerStrikeSkill()],
         inv,
       );
     },
   },
   {
-    id: 'rogue',
-    name: 'LADINO',
-    portrait: '🗡️',
-    tagline: 'Veloz e letal',
-    lore: 'Age nas sombras. Cada golpe é calculado para máxima devastação antes que o inimigo reaja.',
-    color: '#22c55e',
-    stats: { hp: 85, mp: 50, atk: 16, def: 4, spd: 10 },
+    id: 'warden',
+    name: 'SENTINELA',
+    tagline: 'Guardião do Éter',
+    lore: 'Versátil e resiliente, utiliza tecnologia antiga para suporte e combate. Nunca cede terreno.',
+    color: '#f59e0b',
+    stats: { hp: 105, mp: 80, atk: 12, def: 6, spd: 6 },
     skills: [
-      { name: 'Golpe Traiçoeiro', description: '2.8× dano crítico', manaCost: 20 },
-      { name: 'Lâmina Envenenada', description: 'Dano + Veneno 3 turnos', manaCost: 15 },
-      { name: 'Golpe Poderoso', description: '2.2× dano + Fraqueza', manaCost: 10 },
+      { name: 'Cura Sagrada',   description: 'Cura 25% HP + Regen',         manaCost: 25 },
+      { name: 'Golpe Sagrado',  description: '1.6× dano + cura própria',     manaCost: 35 },
+      { name: 'Escudo Divino',  description: '+10 DEF + Regen por 3 turnos', manaCost: 30 },
     ],
     buildPlayer: (name) => {
       const inv = new Inventory(20);
       inv.add(makeStartingPotion());
       return new Player(
         name,
-        { hp: 85, maxHp: 85, mana: 50, maxMana: 50, baseAttack: 16, baseDefense: 4, speed: 10, level: 1 },
-        [new BackstabSkill(), new PoisonBladeSkill(), new PowerStrikeSkill()],
+        { hp: 105, maxHp: 105, mana: 80, maxMana: 80, baseAttack: 12, baseDefense: 6, speed: 6, level: 1 },
+        [new HealSkill(), new HolyStrikeSkill(), new DivineShieldSkill()],
         inv,
       );
     },
