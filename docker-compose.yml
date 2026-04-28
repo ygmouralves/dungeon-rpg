@@ -1,0 +1,8 @@
+services:
+  dungeon-rpg:
+    build: .
+    image: dungeon-rpg
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./saves:/app/saves
