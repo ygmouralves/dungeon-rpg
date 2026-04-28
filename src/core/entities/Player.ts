@@ -116,6 +116,15 @@ export class Player extends Entity {
     );
   }
 
+  applyStatBonus(str: number, dex: number, int: number, vit: number): void {
+    this._stats.baseAttack  += str * 2;
+    this._stats.speed       += dex;
+    this._stats.maxMana     += int * 8;
+    this._stats.mana         = this._stats.maxMana;
+    this._stats.maxHp       += vit * 8;
+    this._stats.hp           = this._stats.maxHp;
+  }
+
   private _levelUp(): void {
     this._stats.level++;
     const hpGain = 10 + this._stats.level * 2;

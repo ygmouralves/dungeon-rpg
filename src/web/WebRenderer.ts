@@ -5,6 +5,20 @@ import type { Room } from '../dungeon/Room';
 import type { Item } from '../core/inventory/Item';
 import type { WebChannel, PlayerUI, EnemyUI } from './WebChannel';
 
+const SKILL_ICONS: Record<string, string> = {
+  POWER_STRIKE: '◉',
+  BATTLE_CRY:   '◈',
+  CLEAVE:       '◆',
+  FIREBALL:     '◉',
+  ICE_SHARD:    '◇',
+  ARCANE_SURGE: '✦',
+  BACKSTAB:     '◌',
+  POISON_BLADE: '⊗',
+  HEAL:         '◎',
+  HOLY_STRIKE:  '⊛',
+  DIVINE_SHIELD:'▣',
+};
+
 export class WebRenderer implements IRenderer {
   private _currentEnemies: Enemy[] = [];
 
@@ -53,7 +67,7 @@ export class WebRenderer implements IRenderer {
 
   renderActionMenu(player: Player, _enemies: Enemy[]): void {
     const choices: import('./WebChannel').ChoiceItem[] = [
-      { value: '1', label: 'ATACAR', description: 'Ataque físico básico', kind: 'attack' },
+      { value: '1', label: 'ATACAR', description: 'Ataque físico básico', icon: '⚔', kind: 'attack' },
     ];
 
     for (const skill of player.skills) {
@@ -63,6 +77,7 @@ export class WebRenderer implements IRenderer {
         value: `skill_${skill.id}`,
         label: skill.name,
         description: `${skill.description}  ·  ${skill.manaCost} EP${cd > 0 ? `  ·  Recarga: ${cd}T` : ''}`,
+        icon: SKILL_ICONS[skill.id] ?? '✦',
         kind: 'skill',
         disabled: !available,
       });
@@ -74,11 +89,12 @@ export class WebRenderer implements IRenderer {
         value: '3',
         label: 'ITEM',
         description: `${consumables.length} item${consumables.length > 1 ? 's' : ''} disponível${consumables.length > 1 ? 'is' : ''}`,
+        icon: '◎',
         kind: 'item',
       });
     }
 
-    choices.push({ value: '4', label: 'FUGIR', description: 'Abandonar o combate', kind: 'flee' });
+    choices.push({ value: '4', label: 'FUGIR', description: 'Abandonar o combate', icon: '↩', kind: 'flee' });
 
     this._channel.setPendingChoices(choices);
   }
@@ -89,9 +105,29 @@ export class WebRenderer implements IRenderer {
     }
   }
 
-  renderLevelUp(player: Player): void {
-    this._channel.send({ type: 'LOG', text: `NÍVEL SUPERIOR — Lv.${player.level}`, color: 'gold' });
-    this._channel.send({ type: 'STATE', player: this._toPlayerUI(player), enemies: [] });
+  async renderLevelUp(player: Player, points: number): Promise<void> {
+    this._channel.send({ type: 'LEVEL_UP', level: player.level, points });
+
+    const raw = await new Promise<string>(resolve => this._channel.once('input', resolve));
+
+    try {
+      const alloc = JSON.parse(raw) as { str?: number; dex?: number; int?: number; vit?: number };
+      player.applyStatBonus(
+        Math.max(0, alloc.str ?? 0),
+        Math.max(0, alloc.dex ?? 0),
+        Math.max(0, alloc.int ?? 0),
+        Math.max(0, alloc.vit ?? 0),
+      );
+    } catch {
+      // Fallback: auto-distribute all points to hp
+      player.applyStatBonus(0, 0, 0, points);
+    }
+
+    this._channel.send({
+      type: 'STATE',
+      player: this._toPlayerUI(player),
+      enemies: this._currentEnemies.filter(e => e.isAlive()).map(e => this._toEnemyUI(e)),
+    });
   }
 
   renderGameOver(): void {

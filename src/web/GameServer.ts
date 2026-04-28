@@ -14,7 +14,7 @@ import { buildPlayerForClass, getClassesUI } from '../core/classes/CharacterClas
 const SAVES_DIR = path.join(process.cwd(), 'saves');
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
-const VALID_CLASS_IDS = new Set(['warrior', 'mage', 'paladin', 'rogue']);
+const VALID_CLASS_IDS = new Set(['vanguard', 'technomage', 'netcipher', 'warden']);
 
 async function startGame(
   name: string,
@@ -58,7 +58,7 @@ export class GameServer {
 
         // Step 3 — wait for class choice
         channel.once('input', (classId: string) => {
-          const chosen = VALID_CLASS_IDS.has(classId) ? classId : 'warrior';
+          const chosen = VALID_CLASS_IDS.has(classId) ? classId : 'vanguard';
 
           startGame(heroName, chosen, input, renderer).catch(err => {
             console.error(`[game:${heroName}]`, err);

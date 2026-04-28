@@ -314,6 +314,7 @@ function handleMsg(msg) {
     case 'ROOM':         showRoom(msg.roomType, msg.description); break;
     case 'PROMPT':       showPrompt(msg);                        break;
     case 'CLASS_SELECT': showClassScreen(msg.classes);           break;
+    case 'LEVEL_UP':     showLevelUpModal(msg.level, msg.points);break;
     case 'GAME_OVER':
       showOverlay('game-over', 'PROTOCOLO ENCERRADO', 'Você sucumbiu nas profundezas do Éter...');
       break;
@@ -361,6 +362,15 @@ function updateHUD(player, enemies) {
 
   const hpPct = player.hp / player.maxHp;
   els.hpFill.closest('.s-bar-row').classList.toggle('hp-low', hpPct < 0.25);
+
+  // Screen shake when player takes damage
+  if (prev && player.hp < prev.hp) {
+    const arena = document.querySelector('.g-arena');
+    arena.classList.remove('arena-shake');
+    void arena.offsetWidth;
+    arena.classList.add('arena-shake');
+    setTimeout(() => arena.classList.remove('arena-shake'), 500);
+  }
 
   if (prev && player.level > prev.level) {
     const sidebar = document.querySelector('.g-sidebar');
@@ -564,45 +574,46 @@ function showPrompt(prompt) {
   if (prompt.kind === 'choice') {
     if (state.phase === 'NAME_INPUT') return;
 
-    const grid = document.createElement('div');
-    grid.className = 'action-grid';
-
-    // Separate attack/flee from skills/items for layout
-    const mainRow = document.createElement('div');
-    mainRow.className = 'action-row';
-    const skillRow = document.createElement('div');
-    skillRow.className = 'action-row';
-
-    let hasSkillRow = false;
+    const bar = document.createElement('div');
+    bar.className = 'action-bar';
 
     prompt.choices.forEach(choice => {
-      const btn = document.createElement('button');
-      const kind = choice.kind || 'default';
-      btn.className = 'action-btn';
-      btn.dataset.kind = kind;
-      btn.dataset.value = choice.value;
-      btn.disabled = !!choice.disabled;
+      const card = document.createElement('button');
+      const kind  = choice.kind || 'default';
+      card.className = 'action-card';
+      card.dataset.kind  = kind;
+      card.dataset.value = choice.value;
+      card.disabled = !!choice.disabled;
 
-      btn.innerHTML = `
-        <span class="btn-label">${escHtml(choice.label)}</span>
-        ${choice.description ? `<span class="btn-desc">${escHtml(choice.description)}</span>` : ''}
+      // EP cost badge: skills show cost, attack/flee show nothing or label
+      let costHtml = '';
+      if (choice.description) {
+        const epMatch = choice.description.match(/(\d+)\s*EP/);
+        if (epMatch) {
+          costHtml = `<span class="card-cost">${epMatch[1]} EP</span>`;
+        } else if (kind === 'attack') {
+          costHtml = `<span class="card-cost free">ATK</span>`;
+        } else if (kind === 'flee') {
+          costHtml = '';
+        } else {
+          costHtml = `<span class="card-cost free">—</span>`;
+        }
+      }
+
+      card.innerHTML = `
+        <span class="card-icon">${escHtml(choice.icon || '◈')}</span>
+        <span class="card-name">${escHtml(choice.label)}</span>
+        ${costHtml}
       `;
 
-      btn.addEventListener('click', () => {
+      card.addEventListener('click', () => {
         if (!choice.disabled) { send(choice.value); clearActionArea(); }
       });
 
-      if (kind === 'skill') {
-        skillRow.appendChild(btn);
-        hasSkillRow = true;
-      } else {
-        mainRow.appendChild(btn);
-      }
+      bar.appendChild(card);
     });
 
-    grid.appendChild(mainRow);
-    if (hasSkillRow) grid.appendChild(skillRow);
-    els.actionArea.appendChild(grid);
+    els.actionArea.appendChild(bar);
     showScreen('game');
 
   } else if (prompt.kind === 'text') {
@@ -659,6 +670,182 @@ function renderTextInput(placeholder) {
 
 function clearActionArea() { els.actionArea.innerHTML = ''; }
 
+// ── Level Up Modal ────────────────────────────────────────────────
+const CLASS_REC = {
+  vanguard:   { str: 0.5, dex: 0.1, int: 0.0, vit: 0.4 },
+  technomage: { str: 0.0, dex: 0.2, int: 0.6, vit: 0.2 },
+  netcipher:  { str: 0.3, dex: 0.5, int: 0.1, vit: 0.1 },
+  warden:     { str: 0.2, dex: 0.0, int: 0.4, vit: 0.4 },
+};
+
+const STAT_DEFS = [
+  { key: 'str', abbr: 'FOR', desc: 'Força · +2 ATK por ponto' },
+  { key: 'dex', abbr: 'DES', desc: 'Destreza · +1 VEL por ponto' },
+  { key: 'int', abbr: 'INT', desc: 'Intelecto · +8 EP por ponto' },
+  { key: 'vit', abbr: 'VIT', desc: 'Vitalidade · +8 HP por ponto' },
+];
+
+function showLevelUpModal(level, totalPoints) {
+  addLog(`NÍVEL ${level} ATINGIDO — Distribua ${totalPoints} pontos!`, 'gold');
+
+  const alloc = { str: 0, dex: 0, int: 0, vit: 0 };
+  let remaining = totalPoints;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'lu-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'lu-modal';
+
+  const ptsBadge = document.createElement('span');
+  ptsBadge.className = 'lu-points-badge';
+
+  function updateBadge() {
+    ptsBadge.textContent = remaining === 0
+      ? 'Todos os pontos distribuídos'
+      : `${remaining} ponto${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}`;
+  }
+
+  modal.innerHTML = `
+    <div class="lu-header">
+      <div class="lu-rune">✦</div>
+      <div class="lu-title">NÍVEL ${level}</div>
+      <div class="lu-subtitle">Distribua seus atributos</div>
+    </div>
+  `;
+  modal.querySelector('.lu-header').appendChild(ptsBadge);
+
+  // Stat rows
+  const statsContainer = document.createElement('div');
+  statsContainer.className = 'lu-stats';
+
+  const valEls = {};
+
+  STAT_DEFS.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'lu-stat-row';
+
+    const valEl = document.createElement('span');
+    valEl.className = 'lu-stat-val';
+    valEl.textContent = '0';
+    valEls[s.key] = valEl;
+
+    const btnMinus = document.createElement('button');
+    btnMinus.className = 'lu-stat-btn';
+    btnMinus.textContent = '−';
+    btnMinus.disabled = true;
+
+    const btnPlus = document.createElement('button');
+    btnPlus.className = 'lu-stat-btn';
+    btnPlus.textContent = '+';
+
+    btnPlus.addEventListener('click', () => {
+      if (remaining <= 0) return;
+      alloc[s.key]++;
+      remaining--;
+      valEl.textContent = alloc[s.key];
+      valEl.classList.add('modified');
+      btnMinus.disabled = alloc[s.key] <= 0;
+      btnPlus.disabled  = remaining <= 0;
+      updateBadge();
+      confirmBtn.disabled = remaining > 0;
+    });
+
+    btnMinus.addEventListener('click', () => {
+      if (alloc[s.key] <= 0) return;
+      alloc[s.key]--;
+      remaining++;
+      valEl.textContent = alloc[s.key];
+      if (alloc[s.key] === 0) valEl.classList.remove('modified');
+      btnMinus.disabled = alloc[s.key] <= 0;
+      btnPlus.disabled  = remaining <= 0;
+      updateBadge();
+      confirmBtn.disabled = remaining > 0;
+    });
+
+    row.innerHTML = `
+      <span class="lu-stat-abbr">${s.abbr}</span>
+      <span class="lu-stat-desc">${s.desc}</span>
+    `;
+    row.appendChild(valEl);
+    row.appendChild(btnMinus);
+    row.appendChild(btnPlus);
+    statsContainer.appendChild(row);
+  });
+
+  modal.appendChild(statsContainer);
+
+  // Buttons
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'lu-actions';
+
+  const autoBtn = document.createElement('button');
+  autoBtn.className = 'lu-btn-auto';
+  autoBtn.textContent = '◈ Distribuição Automática';
+
+  autoBtn.addEventListener('click', () => {
+    // Reset
+    STAT_DEFS.forEach(s => { alloc[s.key] = 0; });
+    remaining = totalPoints;
+
+    const rec = CLASS_REC[state.classId] || CLASS_REC.vanguard;
+    let leftover = totalPoints;
+
+    // Floor-distribute according to ratios
+    const order = [...STAT_DEFS].sort((a, b) => (rec[b.key] || 0) - (rec[a.key] || 0));
+    order.forEach((s, i) => {
+      const pts = i < order.length - 1
+        ? Math.round(totalPoints * (rec[s.key] || 0))
+        : leftover;
+      alloc[s.key] = Math.max(0, Math.min(pts, leftover));
+      leftover -= alloc[s.key];
+    });
+
+    // Apply
+    remaining = 0;
+    STAT_DEFS.forEach(s => {
+      valEls[s.key].textContent = alloc[s.key];
+      if (alloc[s.key] > 0) {
+        valEls[s.key].classList.add('modified');
+      } else {
+        valEls[s.key].classList.remove('modified');
+      }
+      // Update +/- buttons inside rows
+      const row = statsContainer.querySelectorAll('.lu-stat-row')[STAT_DEFS.indexOf(s)];
+      const [, , valEl2, btnM, btnP] = row.childNodes;
+      if (btnM) btnM.disabled = alloc[s.key] <= 0;
+      if (btnP) btnP.disabled = remaining <= 0;
+    });
+    updateBadge();
+    confirmBtn.disabled = false;
+  });
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'lu-btn-confirm';
+  confirmBtn.textContent = 'CONFIRMAR';
+  confirmBtn.disabled = true;
+
+  confirmBtn.addEventListener('click', () => {
+    overlay.remove();
+    // Portrait glow
+    els.charPortrait.classList.remove('portrait-levelup');
+    void els.charPortrait.offsetWidth;
+    els.charPortrait.classList.add('portrait-levelup');
+    setTimeout(() => els.charPortrait.classList.remove('portrait-levelup'), 1000);
+
+    send(JSON.stringify(alloc));
+  });
+
+  actionsRow.appendChild(autoBtn);
+  actionsRow.appendChild(confirmBtn);
+  modal.appendChild(actionsRow);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  updateBadge();
+}
+
 // ── Overlay ───────────────────────────────────────────────────────
 function showOverlay(cls, title, sub) {
   state.phase = cls === 'game-over' ? 'GAME_OVER' : 'VICTORY';
@@ -698,7 +885,7 @@ function submitName() {
 document.addEventListener('keydown', e => {
   if (state.phase === 'GAME') {
     if (e.key >= '1' && e.key <= '9') {
-      const btns = [...els.actionArea.querySelectorAll('.action-btn:not(:disabled)')];
+      const btns = [...els.actionArea.querySelectorAll('.action-card:not(:disabled)')];
       const idx = parseInt(e.key, 10) - 1;
       if (btns[idx]) btns[idx].click();
     }

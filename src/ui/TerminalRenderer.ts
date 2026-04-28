@@ -99,9 +99,10 @@ export class TerminalRenderer {
     items.forEach(i => console.log(chalk.yellow(`  + ${i.toString()}`)));
   }
 
-  renderLevelUp(player: Player): void {
-    console.log(chalk.yellow.bold('\n🌟 LEVEL UP! Você chegou ao nível ' + player.level + '! 🌟'));
-    console.log(chalk.green('   HP máximo, MP máximo, ATK e DEF aumentaram!'));
+  async renderLevelUp(player: Player, points: number): Promise<void> {
+    console.log(chalk.yellow.bold('\n★ LEVEL UP! Você chegou ao nível ' + player.level + '! ★'));
+    console.log(chalk.green(`   +${points} pontos distribuídos automaticamente (HP).`));
+    player.applyStatBonus(0, 0, 0, points);
   }
 
   renderGameOver(): void {

@@ -13,7 +13,7 @@ export interface IRenderer {
   renderCombatStatus(player: Player, enemies: Enemy[]): void;
   renderActionMenu(player: Player, enemies: Enemy[]): void;
   renderLoot(items: Item[]): void;
-  renderLevelUp(player: Player): void;
+  renderLevelUp(player: Player, points: number): Promise<void>;
   renderGameOver(): void;
   renderVictory(player: Player): void;
 }

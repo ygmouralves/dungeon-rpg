@@ -105,7 +105,7 @@ export class GameEngine {
         player.gainGold(gold);
         const leveledUp = player.gainExperience(experience);
         this._renderer.log(`\n+${experience} XP  +${gold}G`);
-        if (leveledUp) this._renderer.renderLevelUp(player);
+        if (leveledUp) await this._renderer.renderLevelUp(player, 3);
       }
 
       if (room.loot.length > 0) {

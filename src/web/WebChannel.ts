@@ -6,6 +6,7 @@ export interface ChoiceItem {
   value: string;
   label: string;
   description?: string;
+  icon?: string;
   kind?: 'attack' | 'skill' | 'item' | 'flee' | 'default';
   disabled?: boolean;
 }
@@ -41,6 +42,7 @@ export type ServerMsg =
   | { type: 'PROMPT'; kind: 'text'; placeholder: string }
   | { type: 'PROMPT'; kind: 'choice'; choices: ChoiceItem[] }
   | { type: 'CLASS_SELECT'; classes: ClassUI[] }
+  | { type: 'LEVEL_UP'; level: number; points: number }
   | { type: 'GAME_OVER' }
   | { type: 'VICTORY' };
 
