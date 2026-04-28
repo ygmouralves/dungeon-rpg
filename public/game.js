@@ -110,10 +110,11 @@ function send(value) {
 // ── Message dispatch ──────────────────────────────────────────────
 function handleMsg(msg) {
   switch (msg.type) {
-    case 'LOG':    addLog(msg.text, msg.color); break;
-    case 'STATE':  updateHUD(msg.player, msg.enemies); break;
-    case 'ROOM':   showRoom(msg.roomType, msg.description); break;
-    case 'PROMPT': showPrompt(msg); break;
+    case 'LOG':          addLog(msg.text, msg.color); break;
+    case 'STATE':        updateHUD(msg.player, msg.enemies); break;
+    case 'ROOM':         showRoom(msg.roomType, msg.description); break;
+    case 'PROMPT':       showPrompt(msg); break;
+    case 'CLASS_SELECT': showClassScreen(msg.classes); break;
     case 'GAME_OVER': showOverlay('game-over', '💀 GAME OVER 💀',
       'Você sucumbiu nas sombras da masmorra...'); break;
     case 'VICTORY':   showOverlay('victory',   '🏆 VITÓRIA! 🏆',
@@ -372,6 +373,70 @@ function showOverlay(cls, title, sub) {
     </div>
   `;
   els.overlay.classList.remove('hidden');
+}
+
+// ── Class selection screen ────────────────────────────────────────
+function showClassScreen(classes) {
+  showScreen('class');
+  const grid = document.getElementById('class-grid');
+  grid.innerHTML = '';
+
+  classes.forEach(cls => {
+    const card = document.createElement('div');
+    card.className = 'cc';
+    card.dataset.class = cls.id;
+
+    // Stat max values for bar scaling
+    const MAX = { hp: 140, mp: 100, atk: 20, def: 10, spd: 10 };
+
+    const statRows = [
+      { k: 'HP',  v: cls.stats.hp,  max: MAX.hp },
+      { k: 'MP',  v: cls.stats.mp,  max: MAX.mp },
+      { k: 'ATK', v: cls.stats.atk, max: MAX.atk },
+      { k: 'DEF', v: cls.stats.def, max: MAX.def },
+      { k: 'VEL', v: cls.stats.spd, max: MAX.spd },
+    ].map(s => `
+      <div class="cc-stat-row">
+        <span class="cc-stat-k">${s.k}</span>
+        <div class="cc-stat-track">
+          <div class="cc-stat-fill" style="width:${Math.round((s.v / s.max) * 100)}%"></div>
+        </div>
+        <span class="cc-stat-v">${s.v}</span>
+      </div>
+    `).join('');
+
+    const skillRows = cls.skills.map(s => `
+      <div class="cc-skill">
+        <span class="cc-skill-name">${escHtml(s.name)}</span>
+        <span class="cc-skill-cost">${s.manaCost}mp</span>
+      </div>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="cc-portrait-wrap">
+        <div class="cc-aura"></div>
+        <div class="cc-portrait">${cls.portrait}</div>
+      </div>
+      <div class="cc-name">${escHtml(cls.name)}</div>
+      <div class="cc-tagline">${escHtml(cls.tagline)}</div>
+      <div class="cc-lore">${escHtml(cls.lore)}</div>
+      <div class="cc-stats">${statRows}</div>
+      <div class="cc-skills">${skillRows}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      grid.querySelectorAll('.cc').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+
+      setTimeout(() => {
+        state.phase = 'GAME';
+        addLog(`⚔️  Classe escolhida: ${cls.name}`, 'gold');
+        send(cls.id);
+      }, 280);
+    });
+
+    grid.appendChild(card);
+  });
 }
 
 // ── Screen switcher ───────────────────────────────────────────────

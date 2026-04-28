@@ -1,5 +1,6 @@
 import type WebSocket from 'ws';
 import { EventEmitter } from 'events';
+import type { ClassUI } from '../core/classes/CharacterClass';
 
 export interface ChoiceItem {
   value: string;
@@ -37,6 +38,7 @@ export type ServerMsg =
   | { type: 'ROOM'; roomType: string; description: string }
   | { type: 'PROMPT'; kind: 'text'; placeholder: string }
   | { type: 'PROMPT'; kind: 'choice'; choices: ChoiceItem[] }
+  | { type: 'CLASS_SELECT'; classes: ClassUI[] }
   | { type: 'GAME_OVER' }
   | { type: 'VICTORY' };
 

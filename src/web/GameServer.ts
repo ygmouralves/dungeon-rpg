@@ -5,46 +5,24 @@ import path from 'path';
 import { WebChannel } from './WebChannel';
 import { WebInputHandler } from './WebInputHandler';
 import { WebRenderer } from './WebRenderer';
-import { Player } from '../core/entities/Player';
-import { Inventory } from '../core/inventory/Inventory';
-import { FireballSkill } from '../core/skills/FireballSkill';
-import { HealSkill } from '../core/skills/HealSkill';
-import { PowerStrikeSkill } from '../core/skills/PowerStrikeSkill';
-import { ConsumableItem } from '../core/inventory/ConsumableItem';
 import { DungeonGenerator } from '../dungeon/DungeonGenerator';
 import { CombatEngine } from '../combat/CombatEngine';
 import { JsonSaveService } from '../persistence/JsonSaveService';
 import { GameEngine } from '../game/GameEngine';
-import type { Entity } from '../core/entities/Entity';
+import { buildPlayerForClass, getClassesUI } from '../core/classes/CharacterClass';
 
 const SAVES_DIR = path.join(process.cwd(), 'saves');
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
-function buildPlayer(name: string): Player {
-  const inventory = new Inventory(20);
-  inventory.add(
-    new ConsumableItem(
-      'potion_start',
-      'Poção de Cura',
-      'Restaura 30 HP.',
-      'COMMON',
-      (t: Entity) => { const h = t.heal(30); return `💊 Usou Poção de Cura e recuperou ${h} HP.`; },
-    ),
-  );
-  return new Player(
-    name,
-    { hp: 100, maxHp: 100, mana: 60, maxMana: 60, baseAttack: 12, baseDefense: 5, speed: 6, level: 1 },
-    [new PowerStrikeSkill(), new FireballSkill(), new HealSkill()],
-    inventory,
-  );
-}
+const VALID_CLASS_IDS = new Set(['warrior', 'mage', 'paladin', 'rogue']);
 
 async function startGame(
   name: string,
+  classId: string,
   input: WebInputHandler,
   renderer: WebRenderer,
 ): Promise<void> {
-  const player = buildPlayer(name);
+  const player = buildPlayerForClass(name, classId);
   const saveService = new JsonSaveService(SAVES_DIR, name.toLowerCase().replace(/\s+/g, '_'));
   const generator = new DungeonGenerator();
   const combatEngine = new CombatEngine(input, renderer);
@@ -65,19 +43,27 @@ export class GameServer {
       const input = new WebInputHandler(channel);
       const renderer = new WebRenderer(channel);
 
-      // First ask: hero name (browser renders it on the name-screen)
+      // Step 1 — ask for hero name
       channel.send({ type: 'PROMPT', kind: 'text', placeholder: 'Nome do seu herói' });
 
-      channel.once('input', (name: string) => {
-        const heroName = name.trim();
+      channel.once('input', (rawName: string) => {
+        const heroName = rawName.trim();
         if (!heroName) {
           channel.send({ type: 'LOG', text: '❌ Nome inválido.', color: 'damage' });
           return;
         }
 
-        startGame(heroName, input, renderer).catch(err => {
-          console.error(`[game:${heroName}]`, err);
-          channel.send({ type: 'LOG', text: '❌ Erro interno no jogo.', color: 'damage' });
+        // Step 2 — send class selection screen
+        channel.send({ type: 'CLASS_SELECT', classes: getClassesUI() });
+
+        // Step 3 — wait for class choice
+        channel.once('input', (classId: string) => {
+          const chosen = VALID_CLASS_IDS.has(classId) ? classId : 'warrior';
+
+          startGame(heroName, chosen, input, renderer).catch(err => {
+            console.error(`[game:${heroName}]`, err);
+            channel.send({ type: 'LOG', text: '❌ Erro interno no jogo.', color: 'damage' });
+          });
         });
       });
 
