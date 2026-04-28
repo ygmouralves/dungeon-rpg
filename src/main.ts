@@ -21,7 +21,7 @@ function buildPlayer(name: string): Player {
       'potion_start',
       'Poção de Cura',
       'Restaura 30 HP.',
-      'COMMON',
+      'D',
       t => { const h = t.heal(30); return `💊 Usou Poção de Cura e recuperou ${h} HP.`; },
     ),
   );

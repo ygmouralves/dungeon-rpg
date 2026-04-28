@@ -1,4 +1,4 @@
-import { Item, type ItemRarity } from './Item';
+import { Item, type ItemTier } from './Item';
 import type { Entity } from '../entities/Entity';
 
 export type ConsumableEffect = (target: Entity) => string;
@@ -10,10 +10,10 @@ export class ConsumableItem extends Item {
     id: string,
     name: string,
     description: string,
-    rarity: ItemRarity,
+    tier: ItemTier,
     effect: ConsumableEffect,
   ) {
-    super(id, name, description, rarity);
+    super(id, name, description, tier);
     this._effect = effect;
   }
 

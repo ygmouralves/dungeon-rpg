@@ -1,4 +1,4 @@
-import { Item, type ItemRarity } from './Item';
+import { Item, type ItemTier } from './Item';
 
 export type EquipmentSlot = 'WEAPON' | 'ARMOR' | 'ACCESSORY';
 
@@ -7,12 +7,12 @@ export class EquipmentItem extends Item {
     id: string,
     name: string,
     description: string,
-    rarity: ItemRarity,
+    tier: ItemTier,
     public readonly slot: EquipmentSlot,
     public readonly attackBonus: number,
     public readonly defenseBonus: number,
   ) {
-    super(id, name, description, rarity);
+    super(id, name, description, tier);
   }
 
   getTypeLabel(): string {

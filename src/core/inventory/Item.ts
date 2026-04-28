@@ -1,10 +1,15 @@
-export type ItemRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC';
+export type ItemTier = 'D' | 'C' | 'B' | 'A' | 'S' | 'S+';
 
-export const RARITY_COLORS: Record<ItemRarity, string> = {
-  COMMON: 'white',
-  UNCOMMON: 'green',
-  RARE: 'blue',
-  EPIC: 'magenta',
+/** @deprecated kept only for migration path — use ItemTier instead */
+export type ItemRarity = ItemTier;
+
+export const TIER_DISPLAY: Record<ItemTier, string> = {
+  'D':  'D — Comum',
+  'C':  'C — Incomum',
+  'B':  'B — Raro',
+  'A':  'A — Épico',
+  'S':  'S — Lendário',
+  'S+': 'S+ — Mítico',
 };
 
 export abstract class Item {
@@ -12,12 +17,15 @@ export abstract class Item {
     public readonly id: string,
     public readonly name: string,
     public readonly description: string,
-    public readonly rarity: ItemRarity,
+    public readonly tier: ItemTier,
   ) {}
+
+  /** @deprecated use tier */
+  get rarity(): ItemTier { return this.tier; }
 
   abstract getTypeLabel(): string;
 
   toString(): string {
-    return `[${this.rarity}] ${this.name} — ${this.description}`;
+    return `[${this.tier}] ${this.name} — ${this.description}`;
   }
 }

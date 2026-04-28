@@ -8,7 +8,6 @@ export interface EnemyRewards {
   gold: number;
 }
 
-/** AI action decided each turn. */
 export interface AIAction {
   type: 'ATTACK' | 'SKILL';
   skill?: Skill;
@@ -19,6 +18,7 @@ export class Enemy extends Entity {
   private readonly _rewards: EnemyRewards;
   private readonly _skills: Skill[];
   private readonly _description: string;
+  private _pendingIntent: AIAction | null = null;
 
   constructor(
     name: string,
@@ -37,14 +37,21 @@ export class Enemy extends Entity {
 
   get tier(): EnemyTier { return this._tier; }
   get rewards(): EnemyRewards { return { ...this._rewards }; }
+  get description(): string { return this._description; }
 
+  /** Current cached intent (null if not yet computed this round). */
+  get pendingIntent(): AIAction | null { return this._pendingIntent; }
+
+  /** Pre-calculate and cache what this enemy will do on its turn. */
+  precomputeIntent(): void {
+    this._pendingIntent = this._calcAction();
+  }
+
+  /** Execute the turn: returns cached intent if available, else calculates fresh. */
   decideAction(): AIAction {
-    const usable = this._skills.filter(s => s.canUse(this));
-    if (usable.length > 0 && Math.random() < 0.70) {
-      const skill = usable[Math.floor(Math.random() * usable.length)]!;
-      return { type: 'SKILL', skill };
-    }
-    return { type: 'ATTACK' };
+    const action = this._pendingIntent ?? this._calcAction();
+    this._pendingIntent = null;
+    return action;
   }
 
   tickSkillCooldowns(): void {
@@ -52,7 +59,16 @@ export class Enemy extends Entity {
   }
 
   describe(): string {
-    const tier = this._tier === 'BOSS' ? '👑 BOSS' : this._tier === 'ELITE' ? '⚡ ELITE' : '';
+    const tier = this._tier === 'BOSS' ? '★ BOSS' : this._tier === 'ELITE' ? '◈ ELITE' : '';
     return `${tier} ${this._name} (Lv.${this._stats.level}) — ${this._description}`;
+  }
+
+  private _calcAction(): AIAction {
+    const usable = this._skills.filter(s => s.canUse(this));
+    if (usable.length > 0 && Math.random() < 0.70) {
+      const skill = usable[Math.floor(Math.random() * usable.length)]!;
+      return { type: 'SKILL', skill };
+    }
+    return { type: 'ATTACK' };
   }
 }

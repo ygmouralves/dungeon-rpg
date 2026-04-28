@@ -3,11 +3,12 @@ import type { Enemy } from '../core/entities/Enemy';
 import type { Skill } from '../core/skills/Skill';
 import type { IInputHandler } from '../ui/IInputHandler';
 import type { IRenderer } from '../ui/IRenderer';
+import { EquipmentItem } from '../core/inventory/EquipmentItem';
 
 export type CombatAction =
   | { type: 'ATTACK' }
   | { type: 'SKILL'; skill: Skill }
-  | { type: 'ITEM'; itemId: string }
+  | { type: 'ITEM'; itemId: string; equip: boolean }
   | { type: 'FLEE' };
 
 export type CombatOutcome = 'VICTORY' | 'DEFEAT' | 'FLED';
@@ -22,22 +23,29 @@ export class CombatEngine {
     this._renderer.combatStart(player, enemies);
 
     while (enemies.some(e => e.isAlive()) && player.isAlive()) {
-      const order = this._buildTurnOrder(player, enemies.filter(e => e.isAlive()));
+      const aliveEnemies = enemies.filter(e => e.isAlive());
+
+      // Pre-compute enemy intents for this round so they're visible during player's turn
+      aliveEnemies.forEach(e => e.precomputeIntent());
+
+      const order = this._buildTurnOrder(player, aliveEnemies);
 
       for (const actor of order) {
         if (!player.isAlive()) break;
-        const aliveEnemies = enemies.filter(e => e.isAlive());
-        if (aliveEnemies.length === 0) break;
+        const stillAlive = enemies.filter(e => e.isAlive());
+        if (stillAlive.length === 0) break;
 
         if (actor === 'PLAYER') {
-          const action = await this._promptPlayerAction(player, aliveEnemies);
+          // Render with fresh intents before showing action menu
+          this._renderer.renderCombatStatus(player, stillAlive);
+          const action = await this._promptPlayerAction(player, stillAlive);
 
           if (action.type === 'FLEE') {
-            this._renderer.log('🏃 Você fugiu do combate!');
+            this._renderer.log('Você fugiu do combate!');
             return 'FLED';
           }
 
-          await this._executePlayerAction(action, player, aliveEnemies);
+          await this._executePlayerAction(action, player, stillAlive);
 
           const statusLogs = player.tickStatusEffects();
           statusLogs.forEach(l => this._renderer.log(l));
@@ -51,7 +59,7 @@ export class CombatEngine {
           this._renderer.log(`\n-- Turno de ${enemy.name} --`);
 
           if (enemy.isStunned()) {
-            this._renderer.log(`💫 ${enemy.name} está atordoado e perde o turno!`);
+            this._renderer.log(`${enemy.name} está atordoado e perde o turno!`);
           } else {
             const action = enemy.decideAction();
             if (action.type === 'SKILL' && action.skill) {
@@ -59,7 +67,7 @@ export class CombatEngine {
               this._renderer.log(result.log);
             } else {
               const dmg = player.takeDamage(enemy.attack);
-              this._renderer.log(`💢 ${enemy.name} ataca ${player.name} causando ${dmg} de dano!`);
+              this._renderer.log(`${enemy.name} ataca ${player.name} causando ${dmg} de dano!`);
             }
           }
 
@@ -73,11 +81,11 @@ export class CombatEngine {
     }
 
     if (!player.isAlive()) {
-      this._renderer.log('\n💀 Você foi derrotado...');
+      this._renderer.log('\nVocê foi derrotado...');
       return 'DEFEAT';
     }
 
-    this._renderer.log('\n🏆 Vitória! Todos os inimigos foram derrotados!');
+    this._renderer.log('\nVitória! Todos os inimigos foram derrotados!');
     return 'VICTORY';
   }
 
@@ -99,7 +107,36 @@ export class CombatEngine {
 
       if (choice === '1') return { type: 'ATTACK' };
 
-      // Direct skill selection (web UI sends skill_SKILL_ID)
+      // Inventory card clicks: equip or use
+      if (choice.startsWith('equip_')) {
+        const itemId = choice.slice(6);
+        const item = player.inventory.findById(itemId);
+        if (item && item.getTypeLabel().startsWith('Equipamento')) {
+          return { type: 'ITEM', itemId, equip: true };
+        }
+        this._renderer.log('Item não encontrado ou não é equipável.');
+        this._renderer.renderActionMenu(player, enemies);
+        continue;
+      }
+
+      if (choice.startsWith('use_')) {
+        const itemId = choice.slice(4);
+        const item = player.inventory.findById(itemId);
+        if (item && item.getTypeLabel() === 'Consumível') {
+          return { type: 'ITEM', itemId, equip: false };
+        }
+        this._renderer.log('Item não encontrado ou não é consumível.');
+        this._renderer.renderActionMenu(player, enemies);
+        continue;
+      }
+
+      // Inventory modal trigger (frontend handles opening; backend waits for actual item choice)
+      if (choice === 'open_inventory') {
+        // Frontend will re-render the inventory modal; loop continues waiting for use_/equip_ input
+        continue;
+      }
+
+      // Direct skill selection
       if (choice.startsWith('skill_')) {
         const skillId = choice.slice(6);
         const skill = player.skills.find(s => s.id === skillId);
@@ -109,7 +146,7 @@ export class CombatEngine {
         continue;
       }
 
-      // Terminal fallback: '2' opens skill submenu
+      // Terminal fallbacks
       if (choice === '2') {
         const usable = player.skills.filter(s => s.canUse(player));
         if (usable.length === 0) {
@@ -131,7 +168,7 @@ export class CombatEngine {
         }
         const id = await this._pickItem(consumables);
         if (!id) { this._renderer.renderActionMenu(player, enemies); continue; }
-        return { type: 'ITEM', itemId: id };
+        return { type: 'ITEM', itemId: id, equip: false };
       }
 
       if (choice === '4') return { type: 'FLEE' };
@@ -149,7 +186,7 @@ export class CombatEngine {
 
     if (action.type === 'ATTACK') {
       const dmg = target.takeDamage(player.attack);
-      this._renderer.log(`⚔️  ${player.name} ataca ${target.name} causando ${dmg} de dano!`);
+      this._renderer.log(`${player.name} ataca ${target.name} causando ${dmg} de dano!`);
     }
 
     if (action.type === 'SKILL') {
@@ -160,11 +197,26 @@ export class CombatEngine {
 
     if (action.type === 'ITEM') {
       const item = player.inventory.findById(action.itemId);
-      if (item && item.getTypeLabel() === 'Consumível') {
-        const consumable = item as import('../core/inventory/ConsumableItem').ConsumableItem;
-        const msg = consumable.use(player);
-        player.inventory.remove(action.itemId);
-        this._renderer.log(msg);
+      if (!item) return;
+
+      if (action.equip) {
+        if (item instanceof EquipmentItem) {
+          const prev = player.equip(item);
+          player.inventory.remove(action.itemId);
+          let msg = `◆ ${player.name} equipou ${item.name} [${item.tier}]!`;
+          if (prev) {
+            player.inventory.add(prev);
+            msg += ` (${prev.name} desequipado)`;
+          }
+          this._renderer.log(msg);
+        }
+      } else {
+        if (item.getTypeLabel() === 'Consumível') {
+          const consumable = item as import('../core/inventory/ConsumableItem').ConsumableItem;
+          const msg = consumable.use(player);
+          player.inventory.remove(action.itemId);
+          this._renderer.log(msg);
+        }
       }
     }
   }

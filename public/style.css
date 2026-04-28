@@ -684,7 +684,11 @@ kbd {
   border: 1px solid var(--border);
   border-radius: 6px;
   min-width: 140px;
-  transition: border-color .2s;
+  transform-style: preserve-3d;
+  transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: border-color .2s, box-shadow .2s;
+  will-change: transform;
+  cursor: default;
 }
 
 .ec.elite { border-color: rgba(187,134,252,.4); box-shadow: 0 0 20px rgba(187,134,252,.15); }
@@ -937,6 +941,262 @@ kbd {
   60% { transform: translateX(5px); }
   75% { transform: translateX(-2px); }
 }
+
+/* ── Item Tier System ────────────────────────────────────────────── */
+
+.tier-d   { --tier-color: #8b949e; --tier-shadow: rgba(139,148,158,.25); }
+.tier-c   { --tier-color: #56d364; --tier-shadow: rgba(86,211,100,.25); }
+.tier-b   { --tier-color: #79c0ff; --tier-shadow: rgba(121,192,255,.25); }
+.tier-a   { --tier-color: #a371f7; --tier-shadow: rgba(163,113,247,.25); }
+.tier-s   { --tier-color: #e3b341; --tier-shadow: rgba(227,179,65,.35); }
+.tier-s-plus { --tier-color: #ff4a4a; --tier-shadow: rgba(255,74,74,.35); }
+
+/* Base card with tier theming */
+.item-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 12px 12px;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+}
+
+.item-card.tier-d { border-color: rgba(139,148,158,.35); }
+.item-card.tier-c { border-color: rgba(86,211,100,.4); }
+.item-card.tier-b { border-color: rgba(121,192,255,.45); }
+.item-card.tier-a { border-color: rgba(163,113,247,.5); box-shadow: 0 0 12px rgba(163,113,247,.15); }
+.item-card.tier-s { border-color: rgba(227,179,65,.6); box-shadow: 0 0 16px rgba(227,179,65,.2); }
+.item-card.tier-s-plus {
+  border-color: rgba(255,74,74,.7);
+  box-shadow: 0 0 20px rgba(255,74,74,.25);
+  background: linear-gradient(135deg, #1a0a0a, var(--panel));
+}
+
+.item-card:hover { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px); }
+.item-card:hover { box-shadow: 0 8px 24px var(--tier-shadow, rgba(0,0,0,.3)); }
+
+/* Animated border for S and S+ tiers */
+.item-card.tier-s::before,
+.item-card.tier-s-plus::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9px;
+  background: conic-gradient(
+    from 0deg,
+    var(--tier-color) 0%,
+    transparent 30%,
+    var(--tier-color) 60%,
+    transparent 90%
+  );
+  z-index: -1;
+  animation: border-spin 2.5s linear infinite;
+}
+
+@keyframes border-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.item-card .card-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--tier-color);
+  border: 1px solid var(--tier-color);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-bottom: 6px;
+}
+
+.item-card .card-item-name {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tier-color);
+  letter-spacing: .5px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.item-card .card-item-desc {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.item-card .card-item-stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--ether);
+  line-height: 1.6;
+}
+
+.item-card .card-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.card-action-btn {
+  flex: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  padding: 5px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.card-action-btn.use:hover   { border-color: var(--xp); color: var(--xp); background: rgba(86,211,100,.07); }
+.card-action-btn.equip:hover { border-color: var(--ether); color: var(--ether); background: rgba(121,192,255,.07); }
+.card-action-btn.close:hover { border-color: var(--dim); color: var(--muted); }
+
+/* ── Inventory Modal ─────────────────────────────────────────────── */
+
+.inv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,17,23,.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 250;
+  backdrop-filter: blur(8px);
+  animation: fade-in .2s ease;
+}
+
+.inv-modal {
+  background: rgba(22,27,34,.95);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px rgba(121,192,255,.08), 0 0 60px rgba(56,139,253,.08);
+  padding: 24px 28px;
+  width: 560px;
+  max-width: 94vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: lu-appear .25s cubic-bezier(.2,0,.2,1.3);
+}
+
+.inv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.inv-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+
+.inv-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s, color .15s;
+}
+.inv-close:hover { border-color: var(--border-hi); color: var(--text); }
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  max-height: calc(80vh - 100px);
+  padding-right: 4px;
+}
+
+.inv-empty {
+  font-size: 12px;
+  color: var(--dim);
+  text-align: center;
+  padding: 20px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Enemy Card Redesign with Intent ────────────────────────────── */
+
+/* Intent badge on enemy card */
+.ec-intent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .5px;
+  font-weight: 600;
+  animation: intent-pulse 2s ease-in-out infinite;
+}
+
+.ec-intent.attack {
+  background: rgba(255,123,114,.1);
+  border: 1px solid rgba(255,123,114,.4);
+  color: var(--hp);
+}
+
+.ec-intent.skill {
+  background: rgba(187,134,252,.1);
+  border: 1px solid rgba(187,134,252,.4);
+  color: var(--arcane);
+}
+
+.ec-desc {
+  font-size: 9px;
+  color: var(--dim);
+  text-align: center;
+  line-height: 1.5;
+  font-style: italic;
+  max-width: 140px;
+}
+
+@keyframes intent-pulse {
+  0%,100% { opacity: .8; }
+  50%      { opacity: 1; box-shadow: 0 0 8px currentColor; }
+}
+
+/* ── Card Shuffle (combat start) ────────────────────────────────── */
+
+@keyframes card-deal-in {
+  0%   { opacity: 0; transform: perspective(800px) translateY(60px) rotateX(20deg) scale(.85); }
+  70%  { opacity: 1; transform: perspective(800px) translateY(-6px) rotateX(-2deg) scale(1.02); }
+  100% { opacity: 1; transform: perspective(800px) translateY(0) rotateX(0) scale(1); }
+}
+
+.g-enemies.combat-enter .ec { animation: card-deal-in .45s cubic-bezier(.2,0,.2,1.3) both; }
+.g-enemies.combat-enter .ec:nth-child(2) { animation-delay: .08s; }
+.g-enemies.combat-enter .ec:nth-child(3) { animation-delay: .16s; }
 
 /* Text prompt */
 .text-prompt { display: flex; flex-direction: column; gap: 8px; width: 100%; }

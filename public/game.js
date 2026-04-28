@@ -268,12 +268,15 @@ const els = {
   overlay:      $('overlay'),
 };
 
+const TIER_CSS = { 'D': 'tier-d', 'C': 'tier-c', 'B': 'tier-b', 'A': 'tier-a', 'S': 'tier-s', 'S+': 'tier-s-plus' };
+
 const state = {
-  phase:   'NAME_INPUT',
-  ws:      null,
-  classId: null,
-  lastPlayer: null,
-  prevHp: {},  // tracks enemy HP for damage floats
+  phase:       'NAME_INPUT',
+  ws:          null,
+  classId:     null,
+  lastPlayer:  null,
+  prevHp:      {},   // tracks enemy HP for damage floats
+  inventory:   [],   // cached from latest STATE message
 };
 
 // ── WebSocket ─────────────────────────────────────────────────────
@@ -347,6 +350,7 @@ function updateHUD(player, enemies) {
   if (!player) return;
   const prev = state.lastPlayer;
   state.lastPlayer = player;
+  state.inventory = player.inventory || [];
 
   els.playerName.textContent  = player.name;
   els.playerLevel.textContent = `Lv.${player.level}`;
@@ -421,28 +425,48 @@ function updateEnemies(enemies) {
   if (existing.length === alive.length) {
     alive.forEach((e, i) => updateEnemyCard(existing[i], e));
   } else {
+    const isCombatStart = existing.length === 0 && alive.length > 0;
     state.prevHp = {};
     alive.forEach(e => { state.prevHp[e.name] = e.hp; });
     els.enemyArea.innerHTML = alive.map(buildEnemyCardHtml).join('');
+    if (isCombatStart) {
+      els.enemyArea.classList.remove('combat-enter');
+      void els.enemyArea.offsetWidth;
+      els.enemyArea.classList.add('combat-enter');
+      setTimeout(() => els.enemyArea.classList.remove('combat-enter'), 700);
+    }
+    // Attach 3D tilt to newly created enemy cards
+    els.enemyArea.querySelectorAll('.ec').forEach(attachTilt);
   }
 }
 
+function buildIntentHtml(intent) {
+  if (!intent) return '';
+  const cls   = intent.type === 'ATTACK' ? 'attack' : 'skill';
+  const icon  = intent.type === 'ATTACK' ? '⚔' : '✦';
+  const label = intent.type === 'ATTACK' ? 'Ataque' : escHtml(intent.label);
+  return `<div class="ec-intent ${cls}">${icon} ${label}</div>`;
+}
+
 function buildEnemyCardHtml(enemy) {
-  const pct   = Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100));
-  const tier  = (enemy.tier || '').toLowerCase();
-  const color = tier === 'boss' ? '#ff7b72' : tier === 'elite' ? '#bb86fc' : '#8b949e';
-  const badge = enemy.tier === 'BOSS'  ? '<div class="ec-badge">✦ BOSS</div>'
-              : enemy.tier === 'ELITE' ? '<div class="ec-badge">◈ ELITE</div>'
-              : '';
+  const pct    = Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100));
+  const tier   = (enemy.tier || '').toLowerCase();
+  const color  = tier === 'boss' ? '#ff7b72' : tier === 'elite' ? '#bb86fc' : '#8b949e';
+  const badge  = enemy.tier === 'BOSS'  ? '<div class="ec-badge">✦ BOSS</div>'
+               : enemy.tier === 'ELITE' ? '<div class="ec-badge">◈ ELITE</div>'
+               : '';
   const status = (enemy.statusEffects || []).filter(Boolean).join(' · ');
+  const desc   = enemy.description ? `<div class="ec-desc">${escHtml(enemy.description)}</div>` : '';
 
   return `
     <div class="ec ${tier}" data-name="${escHtml(enemy.name)}">
       <div class="ec-aura"></div>
       ${badge}
+      ${buildIntentHtml(enemy.intent)}
       <div class="ec-sprite">${ENEMY_PORTRAIT(color)}</div>
       <div class="ec-name">${escHtml(enemy.name)}</div>
       <div class="ec-level">Lv.${enemy.level}</div>
+      ${desc}
       <div class="ec-hp-bar"><div class="ec-hp-fill" style="width:${pct}%"></div></div>
       <div class="ec-hp-val">${enemy.hp}/${enemy.maxHp}</div>
       ${status ? `<div class="ec-status">${escHtml(status)}</div>` : ''}
@@ -467,9 +491,34 @@ function updateEnemyCard(cardEl, enemy) {
   }
 
   state.prevHp[enemy.name] = enemy.hp;
-  fill.style.width = `${pct}%`;
+  if (fill) fill.style.width = `${pct}%`;
   if (lbl) lbl.textContent = `${enemy.hp}/${enemy.maxHp}`;
   if (sts) sts.textContent = (enemy.statusEffects || []).filter(Boolean).join(' · ');
+
+  // Update intent badge
+  const oldIntent = cardEl.querySelector('.ec-intent');
+  const newIntentHtml = buildIntentHtml(enemy.intent);
+  if (oldIntent) {
+    oldIntent.outerHTML = newIntentHtml || '';
+  } else if (newIntentHtml) {
+    const sprite = cardEl.querySelector('.ec-sprite');
+    if (sprite) sprite.insertAdjacentHTML('beforebegin', newIntentHtml);
+  }
+}
+
+// ── 3D Card Tilt ──────────────────────────────────────────────────
+function attachTilt(card) {
+  card.addEventListener('mousemove', e => {
+    const r  = card.getBoundingClientRect();
+    const x  = (e.clientX - r.left) / r.width  - 0.5;
+    const y  = (e.clientY - r.top)  / r.height - 0.5;
+    card.style.setProperty('--rx', `${y * -10}deg`);
+    card.style.setProperty('--ry', `${x *  10}deg`);
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.setProperty('--rx', '0deg');
+    card.style.setProperty('--ry', '0deg');
+  });
 }
 
 function showFloatingDamage(cardEl, amount) {
@@ -585,7 +634,7 @@ function showPrompt(prompt) {
       card.dataset.value = choice.value;
       card.disabled = !!choice.disabled;
 
-      // EP cost badge: skills show cost, attack/flee show nothing or label
+      // EP cost badge
       let costHtml = '';
       if (choice.description) {
         const epMatch = choice.description.match(/(\d+)\s*EP/);
@@ -593,9 +642,7 @@ function showPrompt(prompt) {
           costHtml = `<span class="card-cost">${epMatch[1]} EP</span>`;
         } else if (kind === 'attack') {
           costHtml = `<span class="card-cost free">ATK</span>`;
-        } else if (kind === 'flee') {
-          costHtml = '';
-        } else {
+        } else if (kind !== 'flee') {
           costHtml = `<span class="card-cost free">—</span>`;
         }
       }
@@ -607,9 +654,16 @@ function showPrompt(prompt) {
       `;
 
       card.addEventListener('click', () => {
-        if (!choice.disabled) { send(choice.value); clearActionArea(); }
+        if (choice.disabled) return;
+        if (choice.value === 'open_inventory') {
+          showInventoryModal();
+        } else {
+          send(choice.value);
+          clearActionArea();
+        }
       });
 
+      attachTilt(card);
       bar.appendChild(card);
     });
 
@@ -669,6 +723,81 @@ function renderTextInput(placeholder) {
 }
 
 function clearActionArea() { els.actionArea.innerHTML = ''; }
+
+// ── Inventory Modal ───────────────────────────────────────────────
+function showInventoryModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'inv-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'inv-modal';
+
+  modal.innerHTML = `
+    <div class="inv-header">
+      <span class="inv-title">◎ INVENTÁRIO</span>
+      <button class="inv-close" title="Fechar">✕</button>
+    </div>
+  `;
+
+  const grid = document.createElement('div');
+  grid.className = 'inv-grid';
+
+  if (!state.inventory || state.inventory.length === 0) {
+    grid.innerHTML = '<div class="inv-empty">Inventário vazio</div>';
+  } else {
+    state.inventory.forEach(item => {
+      const tierCss  = TIER_CSS[item.tier] || 'tier-d';
+      const isEquip  = item.slot !== null;
+      const statLine = isEquip
+        ? [item.attackBonus > 0 ? `+${item.attackBonus} ATK` : null, item.defenseBonus > 0 ? `+${item.defenseBonus} DEF` : null]
+            .filter(Boolean).join('  ')
+        : '';
+
+      const card = document.createElement('div');
+      card.className = `item-card ${tierCss}`;
+
+      card.innerHTML = `
+        <div class="card-tier-badge">${escHtml(item.tier)}</div>
+        <div class="card-item-name">${escHtml(item.name)}</div>
+        <div class="card-item-desc">${escHtml(item.description)}</div>
+        ${statLine ? `<div class="card-item-stat">${escHtml(statLine)}</div>` : ''}
+        <div class="card-item-actions">
+          ${isEquip
+            ? `<button class="card-action-btn equip" data-id="${escHtml(item.id)}">EQUIPAR</button>`
+            : `<button class="card-action-btn use"   data-id="${escHtml(item.id)}">USAR</button>`}
+        </div>
+      `;
+
+      attachTilt(card);
+      grid.appendChild(card);
+    });
+  }
+
+  modal.appendChild(grid);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const closeModal = () => overlay.remove();
+
+  modal.querySelector('.inv-close').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  grid.addEventListener('click', e => {
+    const equipBtn = e.target.closest('.card-action-btn.equip');
+    const useBtn   = e.target.closest('.card-action-btn.use');
+    if (equipBtn) {
+      const id = equipBtn.dataset.id;
+      closeModal();
+      clearActionArea();
+      send(`equip_${id}`);
+    } else if (useBtn) {
+      const id = useBtn.dataset.id;
+      closeModal();
+      clearActionArea();
+      send(`use_${id}`);
+    }
+  });
+}
 
 // ── Level Up Modal ────────────────────────────────────────────────
 const CLASS_REC = {

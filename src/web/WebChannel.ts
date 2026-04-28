@@ -11,6 +11,17 @@ export interface ChoiceItem {
   disabled?: boolean;
 }
 
+export interface ItemUI {
+  id: string;
+  name: string;
+  description: string;
+  tier: 'D' | 'C' | 'B' | 'A' | 'S' | 'S+';
+  typeLabel: string;
+  attackBonus: number;
+  defenseBonus: number;
+  slot: string | null;
+}
+
 export interface PlayerUI {
   name: string;
   level: number;
@@ -24,6 +35,7 @@ export interface PlayerUI {
   experience: number;
   floor: number;
   statusEffects: string[];
+  inventory: ItemUI[];
 }
 
 export interface EnemyUI {
@@ -32,7 +44,9 @@ export interface EnemyUI {
   hp: number;
   maxHp: number;
   level: number;
+  description: string;
   statusEffects: string[];
+  intent: { type: 'ATTACK' | 'SKILL'; label: string } | null;
 }
 
 export type ServerMsg =

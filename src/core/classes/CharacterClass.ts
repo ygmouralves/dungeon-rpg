@@ -39,7 +39,7 @@ function makeStartingPotion(): ConsumableItem {
     'potion_start',
     'Frasco de Éter',
     'Restaura 30 HP.',
-    'COMMON',
+    'D',
     (t: Entity) => { const h = t.heal(30); return `◈ Usou Frasco de Éter e recuperou ${h} HP.`; },
   );
 }

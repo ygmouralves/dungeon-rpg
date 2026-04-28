@@ -3,20 +3,23 @@ import type { Player } from '../core/entities/Player';
 import type { Enemy } from '../core/entities/Enemy';
 import type { Room } from '../dungeon/Room';
 import type { Item } from '../core/inventory/Item';
-import type { WebChannel, PlayerUI, EnemyUI } from './WebChannel';
+import { EquipmentItem } from '../core/inventory/EquipmentItem';
+import type { WebChannel, PlayerUI, EnemyUI, ItemUI } from './WebChannel';
 
 const SKILL_ICONS: Record<string, string> = {
-  POWER_STRIKE: '◉',
-  BATTLE_CRY:   '◈',
-  CLEAVE:       '◆',
-  FIREBALL:     '◉',
-  ICE_SHARD:    '◇',
-  ARCANE_SURGE: '✦',
-  BACKSTAB:     '◌',
-  POISON_BLADE: '⊗',
-  HEAL:         '◎',
-  HOLY_STRIKE:  '⊛',
-  DIVINE_SHIELD:'▣',
+  POWER_STRIKE:  '◉',
+  BATTLE_CRY:    '◈',
+  CLEAVE:        '◆',
+  FIREBALL:      '◉',
+  ICE_SHARD:     '◇',
+  ARCANE_SURGE:  '✦',
+  BACKSTAB:      '◌',
+  POISON_BLADE:  '⊗',
+  HEAL:          '◎',
+  HOLY_STRIKE:   '⊛',
+  DIVINE_SHIELD: '▣',
+  VENOM_BITE:    '⊗',
+  TAIL_SWEEP:    '◆',
 };
 
 export class WebRenderer implements IRenderer {
@@ -48,6 +51,8 @@ export class WebRenderer implements IRenderer {
 
   combatStart(player: Player, enemies: Enemy[]): void {
     this._currentEnemies = enemies;
+    // Pre-compute intents immediately so they show on the first STATE
+    enemies.forEach(e => e.precomputeIntent());
     this._channel.send({ type: 'LOG', text: 'COMBATE INICIADO', color: 'red' });
     this._channel.send({
       type: 'STATE',
@@ -84,11 +89,20 @@ export class WebRenderer implements IRenderer {
     }
 
     const consumables = player.inventory.getConsumables();
-    if (consumables.length > 0) {
+    const allItems = player.inventory.items;
+    if (allItems.length > 0) {
+      choices.push({
+        value: 'open_inventory',
+        label: 'INVENTÁRIO',
+        description: `${allItems.length} item${allItems.length > 1 ? 's' : ''} — consumíveis e equipamentos`,
+        icon: '◎',
+        kind: 'item',
+      });
+    } else if (consumables.length > 0) {
       choices.push({
         value: '3',
         label: 'ITEM',
-        description: `${consumables.length} item${consumables.length > 1 ? 's' : ''} disponível${consumables.length > 1 ? 'is' : ''}`,
+        description: `${consumables.length} consumível${consumables.length > 1 ? 'is' : ''}`,
         icon: '◎',
         kind: 'item',
       });
@@ -101,7 +115,7 @@ export class WebRenderer implements IRenderer {
 
   renderLoot(items: Item[]): void {
     for (const item of items) {
-      this._channel.send({ type: 'LOG', text: `◈ ${item.toString()}`, color: 'gold' });
+      this._channel.send({ type: 'LOG', text: `◈ [${item.tier}] ${item.name} — ${item.description}`, color: 'gold' });
     }
   }
 
@@ -119,7 +133,6 @@ export class WebRenderer implements IRenderer {
         Math.max(0, alloc.vit ?? 0),
       );
     } catch {
-      // Fallback: auto-distribute all points to hp
       player.applyStatBonus(0, 0, 0, points);
     }
 
@@ -154,26 +167,51 @@ export class WebRenderer implements IRenderer {
       statusEffects: player.getStatusSummary()
         ? player.getStatusSummary().replace(/[\[\]]/g, '').split(', ')
         : [],
+      inventory: player.inventory.items.map(i => this._toItemUI(i)),
     };
   }
 
   private _toEnemyUI(enemy: Enemy): EnemyUI {
+    const intent = enemy.pendingIntent;
     return {
       name: enemy.name,
       tier: enemy.tier,
       hp: enemy.hp,
       maxHp: enemy.maxHp,
       level: enemy.level,
+      description: enemy.description,
       statusEffects: enemy.getStatusSummary()
         ? enemy.getStatusSummary().replace(/[\[\]]/g, '').split(', ')
         : [],
+      intent: intent
+        ? {
+            type: intent.type,
+            label: intent.type === 'SKILL' && intent.skill
+              ? intent.skill.name
+              : 'Ataque',
+          }
+        : null,
+    };
+  }
+
+  private _toItemUI(item: Item): ItemUI {
+    const eq = item instanceof EquipmentItem ? item : null;
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      tier: item.tier,
+      typeLabel: item.getTypeLabel(),
+      attackBonus: eq?.attackBonus ?? 0,
+      defenseBonus: eq?.defenseBonus ?? 0,
+      slot: eq?.slot ?? null,
     };
   }
 
   private _colorFor(msg: string): string {
     if (/dano|ataca|Golpe|Fogo|Gelo|Surto|causando/.test(msg)) return 'damage';
     if (/recupera|Cura|regenera|HP/.test(msg)) return 'heal';
-    if (/usa |Grito|Lâmina|Traiçoeiro|Sagrado|Arcano|Escudo/.test(msg)) return 'skill';
+    if (/usa |Grito|Lâmina|Traiçoeiro|Sagrado|Arcano|Escudo|equipou/.test(msg)) return 'skill';
     if (/NÍVEL|Vitória|LEVEL UP/.test(msg)) return 'gold';
     if (/Veneno|Queimadura|atordoado|Fraqueza|Fortalec/.test(msg)) return 'status';
     if (/GAME OVER|derrotado/.test(msg)) return 'red';
