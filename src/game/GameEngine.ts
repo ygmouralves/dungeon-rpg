@@ -6,6 +6,9 @@ import type { IRenderer } from '../ui/IRenderer';
 import type { IInputHandler } from '../ui/IInputHandler';
 import type { GameState } from './GameState';
 import type { Room } from '../dungeon/Room';
+import { EquipmentItem } from '../core/inventory/EquipmentItem';
+import { ConsumableItem } from '../core/inventory/ConsumableItem';
+import type { Entity } from '../core/entities/Entity';
 
 const MAX_FLOORS = 7;
 
@@ -30,8 +33,13 @@ export class GameEngine {
       if (resume) {
         await this._loadGame();
       } else {
-        await this._saveService.deleteSave();
-        this._newGame();
+        const confirmed = await this._input.confirm('⚠ Apagar progresso anterior? Esta ação é irreversível.');
+        if (confirmed) {
+          await this._saveService.deleteSave();
+          this._newGame();
+        } else {
+          await this._loadGame();
+        }
       }
     } else {
       this._newGame();
@@ -227,11 +235,42 @@ export class GameEngine {
     const data = await this._saveService.load();
     if (!data) { this._newGame(); return; }
 
-    // Restore player stats from snapshot (skills/inventory stay as new-game defaults)
     Object.assign(this._player['_stats'], data.player.stats);
     (this._player as unknown as { _experience: number })['_experience'] = data.player.experience;
     (this._player as unknown as { _gold: number })['_gold'] = data.player.gold;
     (this._player as unknown as { _floor: number })['_floor'] = data.player.floor;
+
+    // Clear starting inventory, then restore from snapshot
+    for (const item of this._player.inventory.items) {
+      this._player.inventory.remove(item.id);
+    }
+    for (const snap of data.player.inventory ?? []) {
+      if (snap.kind === 'EQUIPMENT' && snap.slot && snap.attackBonus !== undefined && snap.defenseBonus !== undefined) {
+        this._player.inventory.add(
+          new EquipmentItem(snap.id, snap.name, snap.description, snap.tier, snap.slot, snap.attackBonus, snap.defenseBonus),
+        );
+      } else if (snap.kind === 'CONSUMABLE' && snap.effectValue !== undefined && snap.effectType) {
+        const val = snap.effectValue;
+        const effect: (t: Entity) => string = snap.effectType === 'hp'
+          ? t => { const h = t.heal(val); return `Usou o item e recuperou ${h} HP.`; }
+          : t => { t.restoreMana(val); return `Usou o item e recuperou ${val} EP.`; };
+        this._player.inventory.add(new ConsumableItem(snap.id, snap.name, snap.description, snap.tier, effect));
+      }
+    }
+
+    // Restore equipped items
+    for (const snap of data.player.equipped ?? []) {
+      if (snap.slot && snap.attackBonus !== undefined && snap.defenseBonus !== undefined) {
+        this._player.equip(
+          new EquipmentItem(snap.id, snap.name, snap.description, snap.tier, snap.slot, snap.attackBonus, snap.defenseBonus),
+        );
+      }
+    }
+
+    // Restore skill cooldowns
+    for (const saved of data.player.skillCooldowns ?? []) {
+      this._player.skills.find(s => s.id === saved.id)?.setCooldown(saved.cooldown);
+    }
 
     this._state = {
       player: this._player,

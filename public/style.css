@@ -229,6 +229,8 @@ body {
 
 .s-status {
   min-height: 22px;
+  max-height: 72px;
+  overflow-y: auto;
   padding: 2px 14px 4px;
   display: flex;
   flex-wrap: wrap;
@@ -788,6 +790,20 @@ kbd {
   0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   20%  { transform: translateX(-50%) translateY(-6px) scale(1.15); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-36px) scale(0.9); }
+}
+
+.dmg-float.player-dmg {
+  color: #ff9955;
+  text-shadow: 0 0 10px rgba(255,150,80,.8);
+  font-size: 16px;
+}
+
+.dmg-float.dmg-miss {
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-shadow: none;
+  opacity: .75;
 }
 
 /* Action area */
@@ -1563,6 +1579,12 @@ kbd {
 }
 
 .sidebar-levelup { animation: levelup-flash .9s ease; }
+
+/* ── Log drawer sidebar-aware positioning ───────────────────────── */
+
+body.phase-name .g-log,
+body.phase-class .g-log { --sidebar-w: 0px; }
+body.phase-game .g-log  { --sidebar-w: 220px; }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 

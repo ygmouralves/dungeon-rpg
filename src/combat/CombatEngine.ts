@@ -95,7 +95,10 @@ export class CombatEngine {
       ...enemies.map(e => ({ speed: e.speed, actor: e as Enemy })),
     ];
     return all
-      .sort((a, b) => b.speed - a.speed + (Math.random() * 2 - 1))
+      .sort((a, b) => {
+        const delta = b.speed - a.speed;
+        return Math.abs(delta) < 3 ? Math.random() - 0.5 : delta;
+      })
       .map(x => x.actor);
   }
 

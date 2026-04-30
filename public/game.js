@@ -401,7 +401,15 @@ function updateBar(type, current, max) {
   if (!fill) return;
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
   fill.style.width = `${pct}%`;
-  if (label) label.textContent = `${current}/${max}`;
+  if (label) {
+    if (type === 'xp') {
+      const need = max - current;
+      const nextLevel = Math.round(max / 100) + 1;
+      label.textContent = need > 0 ? `Faltam ${need} XP ▸ Nv.${nextLevel}` : 'NÍVEL MÁXIMO';
+    } else {
+      label.textContent = `${current}/${max}`;
+    }
+  }
 }
 
 // ── Room ──────────────────────────────────────────────────────────
@@ -523,11 +531,33 @@ function attachTilt(card) {
 
 function showFloatingDamage(cardEl, amount) {
   const num = document.createElement('div');
-  num.className = 'dmg-float';
-  num.textContent = `-${amount}`;
+  if (amount <= 0) {
+    num.className = 'dmg-float dmg-miss';
+    num.textContent = 'MISS';
+  } else {
+    num.className = 'dmg-float';
+    num.textContent = `-${amount}`;
+  }
   cardEl.style.position = 'relative';
   cardEl.appendChild(num);
   setTimeout(() => num.remove(), 950);
+}
+
+function showPlayerDamage(amount) {
+  const num = document.createElement('div');
+  if (amount <= 0) {
+    num.className = 'dmg-float player-dmg dmg-miss';
+    num.textContent = 'BLOQUEADO';
+  } else {
+    num.className = 'dmg-float player-dmg';
+    num.textContent = `-${amount}`;
+  }
+  const arena = document.querySelector('.g-arena');
+  if (arena) {
+    arena.style.position = 'relative';
+    arena.appendChild(num);
+    setTimeout(() => num.remove(), 950);
+  }
 }
 
 // ── Class selection screen ────────────────────────────────────────

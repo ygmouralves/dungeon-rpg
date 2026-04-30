@@ -34,5 +34,7 @@ export abstract class Skill {
 
   get cooldownRemaining(): number { return this._currentCooldown; }
 
+  setCooldown(n: number): void { this._currentCooldown = Math.max(0, n); }
+
   protected abstract execute(caster: Entity, target: Entity): SkillResult;
 }

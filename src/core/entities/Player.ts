@@ -1,8 +1,21 @@
 import { Entity, type EntityStats } from './Entity';
 import type { Skill } from '../skills/Skill';
 import type { Inventory } from '../inventory/Inventory';
-import type { EquipmentItem } from '../inventory/EquipmentItem';
+import { EquipmentItem } from '../inventory/EquipmentItem';
 import type { EquipmentSlot } from '../inventory/EquipmentItem';
+
+export interface InventoryItemSnapshot {
+  kind: 'CONSUMABLE' | 'EQUIPMENT';
+  id: string;
+  name: string;
+  description: string;
+  tier: 'D' | 'C' | 'B' | 'A' | 'S' | 'S+';
+  slot?: 'WEAPON' | 'ARMOR' | 'ACCESSORY';
+  attackBonus?: number;
+  defenseBonus?: number;
+  effectValue?: number;
+  effectType?: 'hp' | 'mp';
+}
 
 export interface PlayerSnapshot {
   name: string;
@@ -10,6 +23,9 @@ export interface PlayerSnapshot {
   experience: number;
   gold: number;
   floor: number;
+  inventory?: InventoryItemSnapshot[];
+  equipped?: InventoryItemSnapshot[];
+  skillCooldowns?: Array<{ id: string; cooldown: number }>;
 }
 
 export class Player extends Entity {
@@ -96,12 +112,39 @@ export class Player extends Entity {
   }
 
   toSnapshot(): PlayerSnapshot {
+    const inventory: InventoryItemSnapshot[] = this._inventory.items.map(item => {
+      if (item instanceof EquipmentItem) {
+        return {
+          kind: 'EQUIPMENT' as const,
+          id: item.id, name: item.name, description: item.description, tier: item.tier,
+          slot: item.slot, attackBonus: item.attackBonus, defenseBonus: item.defenseBonus,
+        };
+      }
+      const match = item.description.match(/(\d+)/);
+      const effectValue = match ? parseInt(match[1]!, 10) : 0;
+      return {
+        kind: 'CONSUMABLE' as const,
+        id: item.id, name: item.name, description: item.description, tier: item.tier,
+        effectValue,
+        effectType: item.description.includes('EP') ? 'mp' : 'hp',
+      };
+    });
+
+    const equipped: InventoryItemSnapshot[] = [...this._equipped.values()].map(item => ({
+      kind: 'EQUIPMENT' as const,
+      id: item.id, name: item.name, description: item.description, tier: item.tier,
+      slot: item.slot, attackBonus: item.attackBonus, defenseBonus: item.defenseBonus,
+    }));
+
     return {
       name: this._name,
       stats: { ...this._stats },
       experience: this._experience,
       gold: this._gold,
       floor: this._floor,
+      inventory,
+      equipped,
+      skillCooldowns: this._skills.map(s => ({ id: s.id, cooldown: s.cooldownRemaining })),
     };
   }
 
